@@ -7,6 +7,7 @@ from tqdm.asyncio import tqdm
 import os
 from PROXYPOOL import proxy_pool
 import random
+from aiohttp import ClientSession, ProxyConnector
 
 
 
@@ -15,38 +16,56 @@ def choose_proxy(pool):
     proxy = random.choice(list(pool.items()))
     return proxy
 
+def renew_proxy(purl):
+
+    pp = proxy_pool()
+    pool = pp.get_pool(url=purl)
+    return pool
 
 TARGET_DIR = r'E:\代码\codewithmosh\downloaded_file'
 # Function to download a single video
 async def download_video(session, url, filename):
     async with asyncio.Semaphore(10):
         file_path = os.path.join(TARGET_DIR, filename)
-        headers = {
-            "User-Agent": Faker().user_agent()
-        }
-
         downloaded = 0
 
         if os.path.exists(file_path):
             downloaded = os.path.getsize(file_path)
 
+
+        headers = {
+            "User-Agent": Faker().user_agent()
+        }
+
         headers['Range'] = f'bytes={downloaded}-'
-        async with session.get(url, headers=headers) as response:
-            if response.status in [200, 206]:
-                content_range = response.headers.get('Content-Range')
-                if content_range:
-                    total_size = int(content_range.split('/')[1])
-                else:
-                    total_size = response.headers.get('Content-Length', 0) + downloaded
+        proxy, value = choose_proxy(pool=pool)
+        proxies = {
+            "http": proxy,
+            "https": proxy,
+        }
 
-                async with aiofiles.open(file_path, mode='ab') as file:
-                    with tqdm(total=total_size, initial=downloaded, unit='B', unit_scale=True, desc=filename, unit_divisor = 1024) as pbar:
-                        async for chunk in response.content.iter_chunked(1024):
-                            await file.write(chunk)
-                            pbar.update(len(chunk))
+        try:
+            async with session.get(url, headers=headers, proxy = proxies) as response:
+                if response.status in [200, 206]:
+                    content_range = response.headers.get('Content-Range', proxy = proxies)
+                    if content_range:
+                        total_size = int(content_range.split('/')[1])
+                    else:
+                        total_size = response.headers.get('Content-Length', 0, proxy = proxies) + downloaded
 
+                    async with aiofiles.open(file_path, mode='ab') as file:
+                        with tqdm(total=total_size, initial=downloaded, unit='B', unit_scale=True, desc=filename, unit_divisor = 1024) as pbar:
+                            async for chunk in response.content.iter_chunked(1024):
+                                await file.write(chunk)
+                                pbar.update(len(chunk))
 
-
+        except Exception as e:
+            print(f"Error downloading {url}: {e}")
+            value -= 1
+            if value <= 5:
+                renew_proxy(purl)
+            await asyncio.sleep(random.uniform(1, 5))
+            tasks.append(download_video(session, url, filename))
 
 
 
@@ -82,13 +101,10 @@ def concatenate_videos(video_files):
 
 # Main function to handle multiple downloads
 async def main():
-    purl = "https://sky.moluo.ltd/api/v1/client/subscribe?token=4cb0b8d617014f9807398f61e6cc70ca"
-    pp = proxy_pool()
-    pool = pp.get_pool(url = purl)
-    proxy = pool.choose_proxy(pool = pool)
-    print(proxy)
+
+    renew_proxy(purl)
     urls = read_urls(r'E:\代码\codewithmosh\urls.txt')
-    tasks = []
+
     async with aiohttp.ClientSession() as session:
         for i, url in enumerate(urls):
             filename = f'video_{i}.mp4'
@@ -121,20 +137,13 @@ async def main():
 
 
 video_file = []
+tasks = []
+pool = {}
+purl = "https://sky.moluo.ltd/api/v1/client/subscribe?token=4cb0b8d617014f9807398f61e6cc70ca"
 # Run the main function
 if __name__ == '__main__':
-    try:
+    while True:
         asyncio.run(main())
 
-    except Exception as e:
-        try:
-            asyncio.run(main())
-
-        except Exception as e:
-            try:
-                asyncio.run(main())
-
-            except Exception as e:
-                asyncio.run(main())
 
 
