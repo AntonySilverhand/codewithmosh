@@ -41,3 +41,9 @@ class proxy_pool:
         text = self.get_proxy(url)
         result = self.parse(text)
         return result
+
+
+
+# pp = proxy_pool()
+# pp.get_pool('https://sky.moluo.ltd/api/v1/client/subscribe?token=4cb0b8d617014f9807398f61e6cc70ca')
+# print(pp.proxies)
