@@ -9,24 +9,11 @@ from PROXYPOOL import proxy_pool
 import random
 
 
-class pool:
 
-    def __init__(self):
-        self.headers = {
-            "User-Agent": Faker().user_agent()
-        }
-        self.url = "https://sky.moluo.ltd/api/v1/client/subscribe?token=4cb0b8d617014f9807398f61e6cc70ca"
-        self.proxies = {}
+def choose_proxy(pool):
 
-
-    def proxy(self):
-        pp = proxy_pool()
-        self.proxies = pp.get_pool(self.url)
-        return self.proxies
-
-    def choose_proxy(self):
-        chosen = random.choice(list(self.proxies.items()))
-        return chosen
+    proxy = random.choice(list(pool.items()))
+    return proxy
 
 
 TARGET_DIR = r'E:\代码\codewithmosh\downloaded_file'
@@ -95,7 +82,11 @@ def concatenate_videos(video_files):
 
 # Main function to handle multiple downloads
 async def main():
-    pool.proxy()
+    purl = "https://sky.moluo.ltd/api/v1/client/subscribe?token=4cb0b8d617014f9807398f61e6cc70ca"
+    pp = proxy_pool()
+    pool = pp.get_pool(url = purl)
+    proxy = pool.choose_proxy(pool = pool)
+    print(proxy)
     urls = read_urls(r'E:\代码\codewithmosh\urls.txt')
     tasks = []
     async with aiohttp.ClientSession() as session:
