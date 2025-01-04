@@ -6,8 +6,9 @@ from moviepy.editor import concatenate_videoclips, VideoFileClip
 from tqdm.asyncio import tqdm
 import os
 
+TARGET_DIR = os.path.join(os.path.dirname(__file__), 'downloaded_file')
+os.makedirs(TARGET_DIR, exist_ok=True)
 
-TARGET_DIR = r'E:\代码\codewithmosh\downloaded_file'
 # Function to download a single video
 async def download_video(session, url, filename):
     async with asyncio.Semaphore(10):
@@ -35,10 +36,6 @@ async def download_video(session, url, filename):
                         async for chunk in response.content.iter_chunked(1024):
                             await file.write(chunk)
                             pbar.update(len(chunk))
-
-
-
-
 
 
 
@@ -104,7 +101,6 @@ async def main():
 
 
 
-
 video_file = []
 # Run the main function
 if __name__ == '__main__':
@@ -121,5 +117,3 @@ if __name__ == '__main__':
 
             except Exception as e:
                 asyncio.run(main())
-
-
